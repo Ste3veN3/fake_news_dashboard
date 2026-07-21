@@ -31,6 +31,7 @@ TEXT_DARK = "#211F1C"
 st.markdown(
     f"""
     <style>
+    html {{ font-size: 118%; }}
     .stApp {{ background-color: #FFFFFF; }}
     h1, h2, h3 {{ color: {INK}; }}
     </style>
@@ -107,6 +108,15 @@ variable_labels = {
 }
 if "variable_select" not in st.session_state:
     st.session_state["variable_select"] = "exclamations"
+if "pending_variable_select" not in st.session_state:
+    st.session_state["pending_variable_select"] = None
+
+# Si el Componente B pidió cambiar la variable (ver más abajo), se aplica
+# ACÁ, antes de crear el selectbox — después de instanciado, Streamlit ya
+# no permite reescribir st.session_state["variable_select"] directamente.
+if st.session_state["pending_variable_select"] is not None:
+    st.session_state["variable_select"] = st.session_state["pending_variable_select"]
+    st.session_state["pending_variable_select"] = None
 
 variable = st.selectbox(
     "Variable a explorar",
@@ -155,7 +165,7 @@ def make_jitter_boxplot(data: pd.DataFrame, col: str) -> go.Figure:
         legend=dict(orientation="h", yanchor="bottom", y=1.02),
         paper_bgcolor="#FFFFFF",
         plot_bgcolor="#FFFFFF",
-        font=dict(color="#211F1C"),
+        font=dict(color="#211F1C", size=15),
     )
     fig.update_xaxes(gridcolor="#E5E5E5", zerolinecolor="#E5E5E5")
     fig.update_yaxes(gridcolor="#E5E5E5", zerolinecolor="#E5E5E5")
@@ -196,16 +206,13 @@ if selection and selection.get("selection", {}).get("point_indices"):
 
 if selected_indices:
     st.success(f"🖱️ {len(selected_indices)} artículo(s) seleccionado(s) por brushing.")
-    tabla = df.loc[df.index.isin(selected_indices), ["title", "subject", "date_parsed", variable, "text", "label_name"]].copy()
-    tabla["fragmento_texto"] = tabla["text"].str.slice(0, 140) + "…"
-    tabla_mostrar = tabla.drop(columns=["text"])
+    tabla = df.loc[df.index.isin(selected_indices), ["title", "subject", variable, "label_name"]].copy()
     st.caption(
-        f"Nota: **{variable_labels[variable]}** se cuenta sobre el cuerpo del artículo (`text`), "
-        "no sobre el título — por eso se incluye un fragmento del texto como referencia. "
-        "Haz clic en una fila para abrir su ficha completa en el Componente C."
+        f"Nota: **{variable_labels[variable]}** se cuenta sobre el cuerpo del artículo, "
+        "no sobre el título. Haz clic en una fila para abrir su ficha completa en el Componente C."
     )
     row_selection = st.dataframe(
-        tabla_mostrar[["title", "subject", "date_parsed", variable, "fragmento_texto", "label_name"]],
+        tabla,
         width="stretch",
         hide_index=True,
         on_select="rerun",
@@ -277,7 +284,7 @@ fig_b.update_layout(
     xaxis_title="|Cohen's d|  (rojo = más en falsas · verde = más en verdaderas)",
     xaxis_rangemode="tozero",  # consistente con el mismo principio aplicado en A
     yaxis=dict(automargin=True),
-    paper_bgcolor="#FFFFFF", plot_bgcolor="#FFFFFF", font=dict(color="#211F1C"),
+    paper_bgcolor="#FFFFFF", plot_bgcolor="#FFFFFF", font=dict(color="#211F1C", size=15),
 )
 fig_b.update_xaxes(gridcolor="#E5E5E5")
 fig_b.update_yaxes(gridcolor="#E5E5E5")
@@ -291,7 +298,7 @@ selection_b = st.plotly_chart(
 if selection_b and selection_b.get("selection", {}).get("points"):
     clicked_var = selection_b["selection"]["points"][0]["customdata"][0]
     if clicked_var != st.session_state["variable_select"]:
-        st.session_state["variable_select"] = clicked_var
+        st.session_state["pending_variable_select"] = clicked_var
         st.rerun()
     row = d_table[d_table["variable"] == clicked_var].iloc[0]
 else:
@@ -389,12 +396,18 @@ else:
     fig_d.add_trace(go.Bar(
         y=comp.index, x=comp["pct_falsa"], orientation="h", name="Falsa",
         marker_color=RED, legendrank=1,
+        text=[f"{p:.0f}%" if p > 0 else "" for p in comp["pct_falsa"]],
+        textposition="inside", insidetextanchor="middle",
+        textfont=dict(color="white", size=13),
         customdata=np.stack([comp["falsa"], comp["total"]], axis=1),
         hovertemplate="<b>%{y}</b><br>Falsa: %{customdata[0]:.0f} de %{customdata[1]:.0f} (%{x:.1f}%)<extra></extra>",
     ))
     fig_d.add_trace(go.Bar(
         y=comp.index, x=comp["pct_verdadera"], orientation="h", name="Verdadera",
         marker_color=TEAL, legendrank=2,
+        text=[f"{p:.0f}%" if p > 0 else "" for p in comp["pct_verdadera"]],
+        textposition="inside", insidetextanchor="middle",
+        textfont=dict(color="white", size=13),
         customdata=np.stack([comp["verdadera"], comp["total"]], axis=1),
         hovertemplate="<b>%{y}</b><br>Verdadera: %{customdata[0]:.0f} de %{customdata[1]:.0f} (%{x:.1f}%)<extra></extra>",
     ))
@@ -405,7 +418,10 @@ else:
         xaxis=dict(title="% del subject", range=[0, 100], rangemode="tozero"),
         yaxis=dict(automargin=True),
         legend=dict(orientation="h", yanchor="bottom", y=1.02),
-        paper_bgcolor="#FFFFFF", plot_bgcolor="#FFFFFF", font=dict(color="#211F1C"),
+        paper_bgcolor="#FFFFFF", plot_bgcolor="#FFFFFF", font=dict(color="#211F1C", size=15),
+    )
+    fig_d.add_vline(
+        x=50, line_dash="dash", line_color=MUTED, opacity=0.5,
     )
     fig_d.update_xaxes(gridcolor="#E5E5E5")
 

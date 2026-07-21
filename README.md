@@ -9,6 +9,20 @@ Panel interactivo que explora diferencias de **estilo de escritura** (no de cont
 entre noticias falsas y verdaderas, usando únicamente variables ya calculadas en el
 preprocesamiento (sin modelos de clasificación).
 
+## Marco de diseño
+
+Además del Nested Model de Munzner (usado en todo el curso), el panel se clasifica según
+la taxonomía de visualización de texto revisada en la Semana 4
+([IEEE PacificVis 2015, vía textvis.lnu.se](https://ieeexplore.ieee.org/document/7156366)):
+
+| Categoría | Aplicado a este dashboard |
+|---|---|
+| **Analytic Tasks** | Lexical/Syntactical Analysis (conteos estilométricos: exclamaciones, preguntas, longitud) + Comparison (falsa vs. verdadera) |
+| **Visualization Tasks** | Comparison (A, B), Region of Interest / brushing (A→C), Categorization (D) |
+| **Domain** | Editorial Media — noticias políticas en inglés, EE.UU., 2015-2017 |
+| **Data** | Corpus/Document — 3,000 artículos con atributos categóricos (`subject`, clase) y cuantitativos (features estilométricas) |
+| **Visualization** | 2D — jitter + boxplot (A), bar chart horizontal ordenado (B), ficha de texto (C), stacked bar 100% (D) |
+
 ## Pipeline de datos (reproducible de principio a fin)
 
 ```
@@ -81,9 +95,12 @@ del dataset, no propia de este proyecto.
 
 - [x] **Componente A** — Distribución por clase (boxplot + jitter), con brushing real:
       selecciona puntos arrastrando (box o lasso) para ver los artículos exactos.
-- [ ] Componente B — Variables más discriminantes (ranking por Cohen's d)
-- [ ] Componente C — Explorador de casos individuales (poblado por el brushing de A)
-- [ ] Componente D — Composición del dataset por `subject`
+- [x] **Componente B** — Variables más discriminantes (ranking por Cohen's d), sincronizado
+      con el selector de A al hacer clic en una barra.
+- [x] **Componente C** — Explorador de casos individuales, poblado por la selección de
+      la tabla de A: ficha completa del artículo con z-scores frente a su propia clase.
+- [x] **Componente D** — Composición del dataset por `subject` (barra 100% apilada,
+      normalizada) — expone el leakage de la variable `subject` como límite metodológico.
 
 ## Estructura
 
